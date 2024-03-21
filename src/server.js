@@ -90,9 +90,9 @@ app.post("/visitor_management/addBlackListVisitor", async (req, res) => {
   }
 });
 //GetVisitDetails
-app.get("/visitor_management/getVisitDetails/:VisitorID", async (req, res) => {
+app.get("/visitor_management/getVisitDetails/", async (req, res) => {
   try {
-    const VisitorID = req.params.VisitorID;
+    const VisitorID = req.body.VisitorID;
     const visitDetails = await visit_collection.findOne({
       VisitorID: VisitorID,
     });
@@ -116,7 +116,7 @@ app.get("/visitor_management/allLocations", async (req, res) => {
       .json({ message: "Internal Server Error", error: error.message });
   }
 });
-//AllVisits
+//AllVisitors
 app.get("/visitor_management/filterVisits", async (req, res) => {
   try {
     // Extract query parameters from the request body
@@ -169,7 +169,7 @@ app.get("/visitor_management/filterVisits", async (req, res) => {
   }
 });
 
-//getAllVisitorType
+//getAllVisitorTypes
 
 app.get("/visitor_management/getAllVisitorTypes", async (req, res) => {
   try {
@@ -187,7 +187,7 @@ app.get("/visitor_management/getAllVisitorTypes", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
-//getAllIdentificationType
+//getAllIdentificationTypes
 
 app.get("/visitor_management/getAllIdentificationTypes", async (req, res) => {
   try {
@@ -213,11 +213,10 @@ app.get("/visitor_management/VisitorTypeChartInfo", async (req, res) => {
   try {
     const { startDate, endDate } = req.body;
     console.log(startDate, endDate);
-    // Convert string dates to JavaScript Date objects
+
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
 
-    // Aggregate pipeline to group visitors by type and count
     const visitorTypeCounts = await visit_collection
       .aggregate([
         {
@@ -230,8 +229,8 @@ app.get("/visitor_management/VisitorTypeChartInfo", async (req, res) => {
         },
         {
           $group: {
-            _id: "$VisitorType", // Group by visitor type
-            count: { $sum: 1 }, // Count occurrences of each type
+            _id: "$VisitorType",
+            count: { $sum: 1 },
           },
         },
       ])
@@ -244,6 +243,94 @@ app.get("/visitor_management/VisitorTypeChartInfo", async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 });
+//checkInVisitor
+app.patch("/visitor_management/CheckInVisitor", async (req, res) => {
+  try {
+    const VisitorID = req.body.VisitorID;
+
+    // Update the status of the selected visitor
+    const result = await visit_collection.updateOne(
+      { VisitorID: VisitorID },
+      { $set: { Status: "CheckedIn" } }
+    );
+
+    if (result.modifiedCount === 1) {
+      res.json({ message: "Visitor checked in successfully" });
+    } else {
+      res.status(404).json({ message: "Visitor not found" });
+    }
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+//CheckOutVisitor
+app.patch("/visitor_management/CheckOutVisitor", async (req, res) => {
+  try {
+    const VisitorID = req.body.VisitorID;
+
+    // Update the status of the selected visitor
+    const result = await visit_collection.updateOne(
+      { VisitorID: VisitorID },
+      { $set: { Status: "CheckedOut" } }
+    );
+
+    if (result.modifiedCount === 1) {
+      res.json({ message: "Visitor checked out successfully" });
+    } else {
+      res.status(404).json({ message: "Visitor not found" });
+    }
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+//CheckOutVisitor
+app.patch("/visitor_management/CancelVisit", async (req, res) => {
+  try {
+    const { _id } = req.body;
+
+    // Update the status of the selected visitor
+    const result = await visit_collection.updateOne(
+      { _id: ObjectId.createFromHexString(_id) },
+      { $set: { Status: "Cancelled" } }
+    );
+
+    if (result.modifiedCount === 1) {
+      res.json({ message: "Visit cancelled successfully" });
+    } else {
+      res.status(404).json({ message: "Visitor not found" });
+    }
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+//GetVisitorInfo
+const { ObjectId } = require("mongodb");
+
+app.get("/visitor_management/GetVisitorInfo", async (req, res) => {
+  try {
+    const { _id } = req.body;
+    const visitorInfo = await visit_collection.findOne({
+      _id: ObjectId.createFromHexString(_id),
+    });
+    if (visitorInfo) {
+      res.status(200).json(visitorInfo);
+    } else {
+      res.status(404).json({ message: "Visitor not found" });
+    }
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+});
+//updateVisit
 
 // Start the server
 app.listen(port, () => {
