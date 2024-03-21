@@ -362,6 +362,136 @@ app.patch("/visitor_management/updateVisit", async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 });
+
+//visitors per month
+
+app.get("/visitor_management/visitorsPerMonth", async (req, res) => {
+  const { startDate, endDate, timezone, tenant, Status } = req.body;
+  const startDateObj = new Date(startDate);
+  const endDateObj = new Date(endDate);
+
+  try {
+    // Fetch visitors data from MongoDB
+    const visitorsData = await visit_collection
+      .find({
+        ExpectedCheckInTime: { $gte: startDateObj, $lte: endDateObj },
+        Status: Status, // Use dynamic Status value
+      })
+      .toArray();
+
+    // Group data by month
+    const groupedData = visitorsData.reduce((acc, curr) => {
+      const month = curr.ExpectedCheckInTime.getMonth() + 1; // Months are zero-based in JavaScript
+      acc[month] = acc[month] || [];
+      acc[month].push(curr);
+      return acc;
+    }, {});
+
+    // Format data to match the desired output
+    const output = Object.keys(groupedData).map((month) => {
+      return {
+        month: month.padStart(2, "0"), // Zero-padding month if needed
+        Status: Status,
+        count: groupedData[month].length,
+      };
+    });
+    // Sort the output by month
+    output.sort((a, b) => {
+      return a.month - b.month;
+    });
+
+    res.json({ [Status.toLowerCase()]: output });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to retrieve data from database" });
+  }
+});
+//visitors per day
+app.get("/visitor_management/visitorsPerDay", async (req, res) => {
+  const { startDate, endDate, timezone, tenant, Status } = req.body;
+  const startDateObj = new Date(startDate);
+  const endDateObj = new Date(endDate);
+
+  try {
+    // Fetch visitors data from MongoDB
+    const visitorsData = await visit_collection
+      .find({
+        ExpectedCheckInTime: { $gte: startDateObj, $lte: endDateObj },
+        Status: Status, // Use dynamic Status value
+      })
+      .toArray();
+
+    // Group data by week
+    const groupedData = visitorsData.reduce((acc, curr) => {
+      const dayOfWeek = curr.ExpectedCheckInTime.getDay(); // 0 (Sunday) through 6 (Saturday)
+      acc[dayOfWeek] = acc[dayOfWeek] || [];
+      acc[dayOfWeek].push(curr);
+      return acc;
+    }, {});
+
+    // Format data to match the desired output
+    const output = Object.keys(groupedData).map((dayOfWeek) => {
+      return {
+        count: groupedData[dayOfWeek].length,
+        day: parseInt(dayOfWeek) === 0 ? 7 : parseInt(dayOfWeek), // Adjust Sunday (0) to 7
+        Status: Status,
+      };
+    });
+    // Sort the output by day
+    output.sort((a, b) => {
+      return a.day - b.day;
+    });
+
+    res.json({ [Status.toLowerCase()]: output });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to retrieve data from database" });
+  }
+});
+//visitorsPerHour
+app.get("/visitor_management/visitorsPerHour", async (req, res) => {
+  const { startDate, endDate, timezone, tenant, Status } = req.body;
+  const startDateObj = new Date(startDate);
+  const endDateObj = new Date(endDate);
+
+  try {
+    // Fetch visitors data from MongoDB
+    const visitorsData = await visit_collection
+      .find({
+        ExpectedCheckInTime: { $gte: startDateObj, $lte: endDateObj },
+        Status: Status, // Use dynamic Status value
+      })
+      .toArray();
+
+    // Group data by hour
+    const groupedData = visitorsData.reduce((acc, curr) => {
+      const hourOfDay = curr.ExpectedCheckInTime.getHours(); // 0 through 23
+      acc[hourOfDay] = acc[hourOfDay] || [];
+      acc[hourOfDay].push(curr);
+      return acc;
+    }, {});
+
+    // Format data to match the desired output
+    const output = Object.keys(groupedData).map((hourOfDay) => {
+      return {
+        count: groupedData[hourOfDay].length,
+        hour: parseInt(hourOfDay), // Hour of the day (0-23)
+        Status: Status,
+      };
+    });
+
+    // Sort the output by hour
+    output.sort((a, b) => {
+      return a.hour - b.hour;
+    });
+
+    res.json({ [Status.toLowerCase()]: output });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to retrieve data from database" });
+  }
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
