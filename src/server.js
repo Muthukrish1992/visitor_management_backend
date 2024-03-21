@@ -331,7 +331,37 @@ app.get("/visitor_management/GetVisitorInfo", async (req, res) => {
   }
 });
 //updateVisit
-
+app.patch("/visitor_management/updateVisit", async (req, res) => {
+  try {
+    const {
+      currentID,
+      editVisitorName,
+      visitorEmail,
+      expectedCheckInTime,
+      expectedCheckOutTime,
+    } = req.body;
+    const expectedCheckInTimeObj = new Date(expectedCheckInTime);
+    const expectedCheckOutTimeObj = new Date(expectedCheckOutTime);
+    const updateVisitor = await visit_collection.updateOne(
+      {
+        _id: ObjectId.createFromHexString(currentID),
+      },
+      {
+        $set: {
+          VisitorName: editVisitorName,
+          EmailID: visitorEmail,
+          ExpectedCheckInTime: expectedCheckInTimeObj,
+          ExpectedCheckOutTime: expectedCheckOutTimeObj,
+        },
+      }
+    );
+    res.status(200).json({ message: "Visitor updated" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
