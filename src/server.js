@@ -12,6 +12,8 @@ const client = new MongoClient(uri);
 const db = client.db("visitor_management");
 const blacklisted_visitors_collection = db.collection("blacklisted_visitors");
 const visit_collection = db.collection("Visit");
+const visitortype_collection = db.collection("VisitorType");
+const identificationtype_collection = db.collection("IdentificationTypes");
 const alllocations_collection = db.collection("ReceptionLocations");
 //GetBlackListedUsers API
 
@@ -161,6 +163,82 @@ app.get("/visitor_management/filterVisits", async (req, res) => {
     res.status(200).json(visits);
   } catch (error) {
     console.error("Error filtering visits", error);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+//getAllVisitorType
+
+app.get("/visitor_management/getAllVisitorTypes", async (req, res) => {
+  try {
+    // Connect to MongoDB
+    await client.connect();
+    console.log("connected to server successfully");
+
+    // Query the collection and return the results
+    const visitorTypes = await visitortype_collection.find({}).toArray();
+
+    // Send the results as response
+    res.json(visitorTypes);
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+//getAllIdentificationType
+
+app.get("/visitor_management/getAllIdentificationTypes", async (req, res) => {
+  try {
+    // Connect to MongoDB
+    await client.connect();
+    console.log("connected to server successfully");
+
+    // Query the collection and return the results
+    const IdentificationTypes = await identificationtype_collection
+      .find({})
+      .toArray();
+
+    // Send the results as response
+    res.json(IdentificationTypes);
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+//VisitorTypeChartInfo
+
+app.get("/visitor_management/VisitorTypeChartInfo", async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+    console.log(startDate, endDate);
+    // Convert string dates to JavaScript Date objects
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+
+    // Aggregate pipeline to group visitors by type and count
+    const visitorTypeCounts = await visit_collection
+      .aggregate([
+        {
+          $match: {
+            ExpectedCheckInTime: {
+              $gte: startDateObj,
+              $lte: endDateObj,
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$VisitorType", // Group by visitor type
+            count: { $sum: 1 }, // Count occurrences of each type
+          },
+        },
+      ])
+      .toArray();
+
+    res.json(visitorTypeCounts);
+  } catch (error) {
     res
       .status(500)
       .json({ message: "Internal server error", error: error.message });
