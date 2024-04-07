@@ -1,9 +1,15 @@
 const { MongoClient } = require("mongodb");
 const express = require("express");
-
+const cors = require("cors");
 const app = express();
-const port = 3000;
+const port = 3005;
 
+// Enable CORS middleware
+app.use(
+  cors({
+    allowedHeaders: ["X-IVIVA-ACCOUNT", "Authorization", "Content-Type"],
+  })
+);
 // Connection URI
 const uri = "mongodb://localhost:27017";
 
@@ -18,6 +24,11 @@ const alllocations_collection = db.collection("ReceptionLocations");
 //GetBlackListedUsers API
 
 app.get("/visitor_management/getBlackListedUsers", async (req, res) => {
+  const ivivaAccount = req.headers["x-iviva-account"];
+  if (!ivivaAccount) {
+    res.status(400).json({ error: "X-IVIVA-ACCOUNT header is missing" });
+    return;
+  }
   try {
     // Connect to MongoDB
     await client.connect();
@@ -50,9 +61,7 @@ app.get(
       if (blacklistedUser) {
         res.status(200).json(blacklistedUser);
       } else {
-        res
-          .status(404)
-          .json({ message: "User not found in blacklisted visitors list" });
+        res.json({ message: "User not found in blacklisted visitors list" });
       }
     } catch (error) {
       console.error("Error retrieving blacklisted visitor:", error);
